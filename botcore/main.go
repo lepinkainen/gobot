@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"strings"
 
+	log "github.com/sirupsen/logrus"
 	irc "github.com/thoj/go-ircevent"
 )
 
@@ -48,7 +49,7 @@ func handleURL(url string, e *irc.Event) {
 
 	jsonBytes, err := json.Marshal(&query)
 	if err != nil {
-		_ = fmt.Errorf("Error marshaling JSON: %#v", err)
+		log.Errorf("Error marshaling JSON: %#v", err)
 		return
 	}
 
@@ -56,31 +57,31 @@ func handleURL(url string, e *irc.Event) {
 	// TODO: Authentication (apikey?)
 	req, err := http.NewRequest("POST", "http://localhost:8081/title", bytes.NewBuffer(jsonBytes))
 	if err != nil {
-		fmt.Printf("Error when connecting to title service: %#v\n", err)
+		log.Errorf("Error when connecting to title service: %#v\n", err)
 		return
 	}
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		_ = fmt.Errorf("Error connecting to title service: %#v", err)
+		log.Errorf("Error connecting to title service: %#v", err)
 		return
 	}
 	defer resp.Body.Close()
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Printf("Could not read from title service: %#v\n", err)
+		log.Errorf("Could not read from title service: %#v\n", err)
 		return
 	}
 
 	err = json.Unmarshal(body, &query)
 	if err != nil {
-		_ = fmt.Errorf("Unable to unmarshal JSON response: %#v", err)
+		log.Errorf("Unable to unmarshal JSON response: %#v", err)
 		return
 	}
 
-	fmt.Printf("%#v", query)
+	log.Debugf("%#v", query)
 
 	e.Connection.Privmsg(e.Arguments[0], fmt.Sprintf("Title: %s", query.Title))
 }
@@ -98,7 +99,7 @@ func Connect(config IRCConfig) {
 		// Join channels for this server
 		for i := 0; i < len(config.Channels); i++ {
 			irccon.Join(config.Channels[i])
-			fmt.Printf("Joining %s\n", config.Channels[i])
+			log.Infof("Joining %s\n", config.Channels[i])
 		}
 
 	})
@@ -110,14 +111,14 @@ func Connect(config IRCConfig) {
 	irccon.AddCallback("376", func(e *irc.Event) {})
 	// RPL_NAMREPLY (List of names from channel after join is successful)
 	irccon.AddCallback("353", func(e *irc.Event) {
-		fmt.Printf("Joined channel %s\n", e.Arguments[2])
-		fmt.Printf("Users on channel: %s\n", e.Arguments[3])
+		log.Infof("Joined channel %s\n", e.Arguments[2])
+		log.Infof("Users on channel: %s\n", e.Arguments[3])
 	})
 	irccon.AddCallback("NOTICE", func(e *irc.Event) {
 		if !debug {
 			return
 		}
-		fmt.Printf("%#v\n", e)
+		log.Infof("%#v\n", e)
 	})
 	irccon.AddCallback("JOIN", func(e *irc.Event) {
 		// autoop everyone who joins :D
@@ -130,7 +131,7 @@ func Connect(config IRCConfig) {
 		for _, arg := range e.Arguments[1:] {
 			urls := urlRegex.FindAllString(arg, -1)
 			if urls != nil {
-				fmt.Printf("URLS FOUND: %#v\n", urls)
+				log.Debugf("URLS FOUND: %#v\n", urls)
 				for _, url := range urls {
 					// Launch each URL handler as a goroutine
 					// Yes there is a risk of DDoS or resouce exhaustion attacks,
@@ -141,12 +142,12 @@ func Connect(config IRCConfig) {
 		}
 		// TODO: handle commands
 
-		fmt.Printf("<%s> %s\n", e.Nick, strings.Join(e.Arguments[1:], " "))
+		log.Infof("<%s> %s\n", e.Nick, strings.Join(e.Arguments[1:], " "))
 	})
 
 	err := irccon.Connect(config.Server)
 	if err != nil {
-		fmt.Printf("Err %s", err)
+		log.Errorf("Err %s", err)
 		return
 	}
 
