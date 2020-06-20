@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 	irc "github.com/thoj/go-ircevent"
 )
 
@@ -30,7 +31,7 @@ type IRCConfig struct {
 	TLS      bool
 }
 
-// TitleQuery used directly from titlebot
+// TitleQuery used directly from titlehandler
 type TitleQuery struct {
 	Added   int64  `json:"timestamp"`
 	User    string `json:"user"`
@@ -53,13 +54,14 @@ func handleURL(url string, e *irc.Event) {
 		return
 	}
 
-	// TODO: Configurable URL
 	// TODO: Authentication (apikey?)
-	req, err := http.NewRequest("POST", "http://localhost:8081/title", bytes.NewBuffer(jsonBytes))
+	req, err := http.NewRequest("POST", viper.GetString("titlehandler"), bytes.NewBuffer(jsonBytes))
 	if err != nil {
 		log.Errorf("Error when connecting to title service: %#v\n", err)
 		return
 	}
+	// Add authentication string
+	req.Header.Add("clientid", viper.GetString("titleauth"))
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
