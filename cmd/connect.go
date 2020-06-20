@@ -22,8 +22,12 @@ THE SOFTWARE.
 package cmd
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/lepinkainen/gobot/botcore"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 // connectCmd represents the connect command
@@ -38,16 +42,27 @@ the command server`,
 // Connect to the defined network
 func command(cmd *cobra.Command, args []string) {
 
-	nick, _ := cmd.Flags().GetString("nick")
-	server, _ := cmd.Flags().GetString("server")
-	verboseFlag, _ := cmd.Flags().GetBool("verbose")
-	debugFlag, _ := cmd.Flags().GetBool("debug")
-	tlsFlag, _ := cmd.Flags().GetBool("tls")
+	nick := viper.GetString("nick")
+	server := viper.GetString("server")
+	verboseFlag := viper.GetBool("verbose")
+	debugFlag := viper.GetBool("debug")
+	tlsFlag := viper.GetBool("tls")
+	channels := viper.GetStringSlice("channels")
+
+	var channelList []string
+
+	for _, channel := range channels {
+		if strings.HasPrefix(channel, "#") {
+			channelList = append(channelList, channel)
+		} else {
+			channelList = append(channelList, fmt.Sprintf("#%s", channel))
+		}
+	}
 
 	config := botcore.IRCConfig{
 		Nick:     nick,
 		Server:   server,
-		Channels: []string{"#pyfibot.test2"},
+		Channels: channelList,
 		Verbose:  verboseFlag,
 		Debug:    debugFlag,
 		TLS:      tlsFlag,
@@ -58,7 +73,6 @@ func command(cmd *cobra.Command, args []string) {
 func init() {
 	rootCmd.AddCommand(connectCmd)
 
-	// TODO channels, multiple flags? config file?
 	connectCmd.Flags().String("nick", "", "Nick to use when connecting")
 	connectCmd.Flags().String("server", "", "Server:port combination for connecting")
 	connectCmd.Flags().BoolP("verbose", "v", false, "Enable verbose callbacks")

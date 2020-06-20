@@ -48,30 +48,41 @@ func handleURL(url string, e *irc.Event) {
 
 	jsonBytes, err := json.Marshal(&query)
 	if err != nil {
-		fmt.Errorf("Error marshaling JSON: %#v", err)
+		_ = fmt.Errorf("Error marshaling JSON: %#v", err)
 		return
 	}
 
 	// TODO: Configurable URL
 	// TODO: Authentication (apikey?)
 	req, err := http.NewRequest("POST", "http://localhost:8081/title", bytes.NewBuffer(jsonBytes))
+	if err != nil {
+		fmt.Printf("Error when connecting to title service: %#v\n", err)
+		return
+	}
+
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		fmt.Errorf("Error connecting to title service: %#v", err)
+		_ = fmt.Errorf("Error connecting to title service: %#v", err)
 		return
 	}
 	defer resp.Body.Close()
 
-	body, _ := ioutil.ReadAll(resp.Body)
-
-	err = json.Unmarshal(body, &query)
+	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Errorf("Unable to unmarshal JSON response: %#v", err)
+		fmt.Printf("Could not read from title service: %#v\n", err)
 		return
 	}
 
-	e.Connection.Privmsg(e.Arguments[0], query.Title)
+	err = json.Unmarshal(body, &query)
+	if err != nil {
+		_ = fmt.Errorf("Unable to unmarshal JSON response: %#v", err)
+		return
+	}
+
+	fmt.Printf("%#v", query)
+
+	e.Connection.Privmsg(e.Arguments[0], fmt.Sprintf("Title: %s", query.Title))
 }
 
 // Connect to a network and join the appropriate channels

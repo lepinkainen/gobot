@@ -25,9 +25,10 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/cobra"
 
-	homedir "github.com/mitchellh/go-homedir"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
 
@@ -75,21 +76,35 @@ func initConfig() {
 		viper.SetConfigFile(cfgFile)
 	} else {
 		// Find home directory.
-		home, err := homedir.Dir()
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
+		// home, err := homedir.Dir()
+		// if err != nil {
+		// 	fmt.Println(err)
+		// 	os.Exit(1)
+		// }
+		// viper.AddConfigPath(home)
 
-		// Search config in home directory with name ".gobot" (without extension).
-		viper.AddConfigPath(home)
-		viper.SetConfigName(".gobot")
+		// Default file is "config.yml" in current directory
+		viper.AddConfigPath(".")
+		viper.SetConfigName("config")
+		viper.SetConfigType("yaml")
 	}
 
 	viper.AutomaticEnv() // read in environment variables that match
 
+	viper.WatchConfig()
+	viper.OnConfigChange(func(e fsnotify.Event) {
+		fmt.Println("Config file changed:", e.Name)
+	})
+
 	// If a config file is found, read it in.
-	if err := viper.ReadInConfig(); err == nil {
-		fmt.Println("Using config file:", viper.ConfigFileUsed())
+	if err := viper.ReadInConfig(); err != nil {
+		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+			log.Info("No config file, running with command line switches only")
+			// Config file not found; ignore error if desired
+		} else {
+			// Config file was found but another error was produced
+		}
+	} else {
+		log.Info("Using config file: ", viper.ConfigFileUsed())
 	}
 }
