@@ -4,7 +4,7 @@ go 1.14
 
 require (
 	github.com/fsnotify/fsnotify v1.4.9
-	github.com/sirupsen/logrus v1.6.0
+	github.com/sirupsen/logrus v1.7.0
 	github.com/spf13/cobra v1.0.0
 	github.com/spf13/viper v1.7.0
 	github.com/thoj/go-ircevent v0.0.0-20190807115034-8e7ce4b5a1eb
