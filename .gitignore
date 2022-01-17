@@ -16,3 +16,5 @@
 
 # Main executable
 gobot
+# Config file, may contain passwords
+config.yml
